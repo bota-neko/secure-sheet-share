@@ -97,24 +97,7 @@ export default function AddUserForm({ facilities, onCreated }: AddUserFormProps)
                         </select>
                     </div>
 
-                    {!isAdmin && (
-                        <div style={{ marginBottom: '1rem' }}>
-                            <label className="label">権限設定</label>
-                            <select
-                                className="input"
-                                value={selectedRole}
-                                onChange={e => setSelectedRole(e.target.value as any)}
-                                required
-                            >
-                                <option value="facility_admin">管理者 (ユーザー管理・全ファイル操作)</option>
-                                <option value="facility_editor">編集者 (ファイルの追加・編集のみ)</option>
-                                <option value="facility_viewer">閲覧者 (閲覧のみ)</option>
-                            </select>
-                            <p style={{ fontSize: '0.75rem', marginTop: '0.25rem', color: 'var(--muted-foreground)' }}>
-                                ※通常は「編集者」または「閲覧者」を選択してください。
-                            </p>
-                        </div>
-                    )}
+
 
                     <div style={{ marginBottom: '1rem' }}>
                         <label className="label">ログインID</label>
