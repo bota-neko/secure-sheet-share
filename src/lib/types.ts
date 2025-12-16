@@ -31,7 +31,7 @@ export interface Record {
     file_creator: string; // ファイル作成者
     sharer: string;       // 共有者
     file_url: string;     // ファイルURL
-    access_level?: 'writer' | 'reader'; // 権限レベル (writer=編集, reader=閲覧)
+    access_level: 'editable' | 'view_only' | 'admin_only'; // アクセスレベル
     created_at: string;
     created_by: string;   // システムユーザーID
     updated_at: string;

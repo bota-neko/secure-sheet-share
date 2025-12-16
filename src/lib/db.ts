@@ -69,6 +69,30 @@ export async function deleteUser(userId: string): Promise<void> {
     await updateRow('users', 'user_id', userId, { status: 'inactive' });
 }
 
+export async function updateUser(userId: string, data: Partial<User>): Promise<User> {
+    const users = await readSheet<User>('users');
+    const existing = users.find(u => u.user_id === userId);
+
+    if (!existing) {
+        throw new Error('User not found');
+    }
+
+    const updates: Partial<User> = {
+        ...data,
+        updated_at: new Date().toISOString(),
+    };
+
+    // Prevent changing immutable fields
+    delete updates.user_id;
+    delete updates.facility_id; // Usually facility shouldn't change, but if admin needs to move user? Let's block for now.
+    delete updates.created_at;
+    delete updates.login_id; // Keep login_id immutable for simplicity? Yes.
+
+    await updateRow('users', 'user_id', userId, updates);
+
+    return { ...existing, ...updates };
+}
+
 // --- Records ---
 
 export async function getRecordsByFacility(facilityId: string): Promise<Record[]> {
@@ -80,8 +104,9 @@ export async function getRecordsByFacility(facilityId: string): Promise<Record[]
     });
 }
 
-export async function createRecord(actorFacilityId: string, actorUserId: string, data: Omit<Record, 'record_id' | 'facility_id' | 'created_at' | 'created_by' | 'updated_at' | 'deleted_flag'>): Promise<Record> {
+export async function createRecord(actorFacilityId: string, actorUserId: string, data: Omit<Record, 'record_id' | 'facility_id' | 'created_at' | 'created_by' | 'updated_at' | 'deleted_flag' | 'access_level'> & { access_level?: 'editable' | 'view_only' | 'admin_only' }): Promise<Record> {
     const newRecord: Record = {
+        access_level: 'editable', // Default
         ...data,
         record_id: crypto.randomUUID(),
         facility_id: actorFacilityId, // FORCE facility_id
@@ -105,6 +130,13 @@ export async function updateRecord(actorFacilityId: string, actorUserId: string,
     // CRITICAL: Force facility check, but allow 'system' admin
     if (actorFacilityId !== 'system' && existing.facility_id !== actorFacilityId) {
         throw new Error('Unauthorized: Facility ID mismatch');
+    }
+
+    // Access Level Check: If view_only, only Admin (system) can edit
+    // Note: Admin passes actorFacilityId='system' (usually) or we need explicit role check.
+    // Here we rely on actorFacilityId === 'system' implies Admin.
+    if (existing.access_level === 'view_only' && actorFacilityId !== 'system') {
+        throw new Error('Forbidden: This record is View Only');
     }
 
     const updates: Partial<Record> = {

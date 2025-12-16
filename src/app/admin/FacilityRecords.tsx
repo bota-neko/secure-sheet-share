@@ -19,12 +19,13 @@ export default function FacilityRecords({ facilityId, facilityName, onClose }: F
     const [showModal, setShowModal] = useState(false);
 
     // Form State
-    const [fileCreator, setFileCreator] = useState('');
     const [fileName, setFileName] = useState('');
+    const [fileCreator, setFileCreator] = useState('');
     const [sharer, setSharer] = useState('');
     const [fileUrl, setFileUrl] = useState('');
-    const [accessLevel, setAccessLevel] = useState<'writer' | 'reader'>('writer');
+    const [accessLevel, setAccessLevel] = useState<'editable' | 'view_only' | 'admin_only'>('editable');
     const [submitting, setSubmitting] = useState(false);
+
     const [editingRecord, setEditingRecord] = useState<Record | null>(null);
 
     const handleCreateRecord = async (e: React.FormEvent) => {
@@ -35,18 +36,24 @@ export default function FacilityRecords({ facilityId, facilityName, onClose }: F
         const url = editingRecord ? `/api/records/${editingRecord.record_id}` : '/api/records';
         const method = editingRecord ? 'PUT' : 'POST';
 
+        // Admin must provide facility_id in body for create, but maybe not update?
+        // Actually updateRecord checks facility_id match.
+        const body: any = {
+            file_name: fileName,
+            file_creator: fileCreator,
+            sharer,
+            file_url: fileUrl,
+            access_level: accessLevel
+        };
+        if (!editingRecord) {
+            body.facility_id = facilityId;
+        }
+
         try {
             const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    facility_id: facilityId,
-                    file_name: fileName,
-                    file_creator: fileCreator,
-                    sharer,
-                    file_url: fileUrl,
-                    access_level: accessLevel
-                }),
+                body: JSON.stringify(body),
             });
 
             if (res.ok) {
@@ -54,13 +61,14 @@ export default function FacilityRecords({ facilityId, facilityName, onClose }: F
                 setFileCreator('');
                 setSharer('');
                 setFileUrl('');
-                setAccessLevel('writer');
+                setAccessLevel('editable');
                 setEditingRecord(null);
                 setShowModal(false);
                 mutate();
                 alert('操作成功しました');
             } else {
-                alert('操作に失敗しました');
+                const data = await res.json();
+                alert(data.error || '操作に失敗しました');
             }
         } catch (e) {
             alert('エラーが発生しました');
@@ -86,6 +94,7 @@ export default function FacilityRecords({ facilityId, facilityName, onClose }: F
         setFileCreator(r.file_creator);
         setSharer(r.sharer);
         setFileUrl(r.file_url);
+        setAccessLevel(r.access_level || 'editable');
         setShowModal(true);
     };
 
@@ -96,6 +105,15 @@ export default function FacilityRecords({ facilityId, facilityName, onClose }: F
         setFileCreator('');
         setSharer('');
         setFileUrl('');
+        setAccessLevel('editable');
+    };
+
+    const getAccessLevelLabel = (level: string) => {
+        switch (level) {
+            case 'view_only': return '閲覧のみ';
+            case 'admin_only': return '管理者のみ';
+            default: return '標準';
+        }
     };
 
     return (
@@ -103,7 +121,7 @@ export default function FacilityRecords({ facilityId, facilityName, onClose }: F
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                 <h4 style={{ margin: 0 }}>{facilityName} のデータ管理</h4>
                 <div>
-                    <button className="btn btn-primary" style={{ marginRight: '0.5rem', fontSize: '0.8rem' }} onClick={() => { setEditingRecord(null); setFileName(''); setFileCreator(''); setSharer(''); setFileUrl(''); setShowModal(true); }}>+ 新規登録</button>
+                    <button className="btn btn-primary" style={{ marginRight: '0.5rem', fontSize: '0.8rem' }} onClick={() => { setEditingRecord(null); setFileName(''); setFileCreator(''); setSharer(''); setFileUrl(''); setAccessLevel('editable'); setShowModal(true); }}>+ 新規登録</button>
                     <button className="btn btn-outline" style={{ fontSize: '0.8rem' }} onClick={onClose}>閉じる</button>
                 </div>
             </div>
@@ -112,10 +130,10 @@ export default function FacilityRecords({ facilityId, facilityName, onClose }: F
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                     <thead style={{ backgroundColor: 'var(--muted)', textAlign: 'left' }}>
                         <tr>
+                            <th style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)' }}>アクセス制限</th>
                             <th style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)' }}>ファイル名</th>
                             <th style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)' }}>ファイル作成者</th>
                             <th style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)' }}>共有者</th>
-                            <th style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)' }}>アクセスレベル</th>
                             <th style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)' }}>ファイルURL</th>
                             <th style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)' }}>登録日</th>
                             <th style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)' }}>操作</th>
@@ -124,19 +142,26 @@ export default function FacilityRecords({ facilityId, facilityName, onClose }: F
                     <tbody>
                         {records?.map((r) => (
                             <tr key={r.record_id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                <td style={{ padding: '0.75rem 1rem' }}><strong>{r.file_name}</strong></td>
-                                <td style={{ padding: '0.75rem 1rem' }}>{r.file_creator}</td>
-                                <td style={{ padding: '0.75rem 1rem' }}>{r.sharer}</td>
-                                <td style={{ padding: '0.75rem 1rem', fontSize: '0.75rem' }}>
-                                    {r.access_level === 'reader' ?
-                                        <span style={{ color: 'var(--muted-foreground)', border: '1px solid var(--border)', borderRadius: '4px', padding: '2px 6px' }}>閲覧のみ</span> :
-                                        <span style={{ color: '#166534', backgroundColor: '#dcfce7', borderRadius: '4px', padding: '2px 6px' }}>共同編集</span>
-                                    }
+                                <td style={{ padding: '0.5rem' }}>
+                                    <span style={{
+                                        fontSize: '0.7rem',
+                                        padding: '0.125rem 0.375rem',
+                                        borderRadius: '999px',
+                                        backgroundColor: r.access_level === 'admin_only' ? '#fee2e2' : r.access_level === 'view_only' ? '#f3f4f6' : '#dcfce7',
+                                        color: r.access_level === 'admin_only' ? '#991b1b' : r.access_level === 'view_only' ? '#374151' : '#166534',
+                                        border: '1px solid',
+                                        borderColor: r.access_level === 'admin_only' ? '#fecaca' : r.access_level === 'view_only' ? '#d1d5db' : '#bbf7d0'
+                                    }}>
+                                        {getAccessLevelLabel(r.access_level)}
+                                    </span>
                                 </td>
-                                <td style={{ padding: '0.75rem 1rem' }}>
+                                <td style={{ padding: '0.5rem' }}><strong>{r.file_name}</strong></td>
+                                <td style={{ padding: '0.5rem' }}>{r.file_creator}</td>
+                                <td style={{ padding: '0.5rem' }}>{r.sharer}</td>
+                                <td style={{ padding: '0.5rem' }}>
                                     <a href={r.file_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>Link</a>
                                 </td>
-                                <td style={{ padding: '0.75rem 1rem' }}>
+                                <td style={{ padding: '0.5rem' }}>
                                     {new Date(r.created_at).toLocaleDateString("ja-JP")}
                                 </td>
                                 <td style={{ padding: '0.5rem', display: 'flex', gap: '0.5rem' }}>
@@ -159,7 +184,7 @@ export default function FacilityRecords({ facilityId, facilityName, onClose }: F
                         ))}
                         {(!records || records.length === 0) && (
                             <tr>
-                                <td colSpan={5} style={{ padding: '1rem', textAlign: 'center', color: 'var(--muted-foreground)' }}>データなし</td>
+                                <td colSpan={7} style={{ padding: '1rem', textAlign: 'center', color: 'var(--muted-foreground)' }}>データなし</td>
                             </tr>
                         )}
                     </tbody>
@@ -175,6 +200,18 @@ export default function FacilityRecords({ facilityId, facilityName, onClose }: F
                     <div className="card" style={{ width: '100%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto' }}>
                         <h3 style={{ marginBottom: '1.5rem' }}>{facilityName}: {editingRecord ? '編集' : '新規登録'}</h3>
                         <form onSubmit={handleCreateRecord}>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label className="label">アクセス制限</label>
+                                <select
+                                    className="input"
+                                    value={accessLevel}
+                                    onChange={e => setAccessLevel(e.target.value as any)}
+                                >
+                                    <option value="editable">標準 (編集可)</option>
+                                    <option value="view_only">読み取り専用 (管理者専用編集)</option>
+                                    <option value="admin_only">管理者のみ (非公開)</option>
+                                </select>
+                            </div>
                             <div style={{ marginBottom: '1rem' }}>
                                 <label className="label">ファイル名 (必須)</label>
                                 <input className="input" value={fileName} onChange={e => setFileName(e.target.value)} required placeholder="例: ファイル名" />

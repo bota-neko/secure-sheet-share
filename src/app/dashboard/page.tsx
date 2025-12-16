@@ -22,7 +22,6 @@ export default function FacilityDashboard() {
     const [fileName, setFileName] = useState('');
     const [sharer, setSharer] = useState('');
     const [fileUrl, setFileUrl] = useState('');
-    const [accessLevel, setAccessLevel] = useState<'writer' | 'reader'>('writer'); // Default writer
     const [submitting, setSubmitting] = useState(false);
     const [editingRecord, setEditingRecord] = useState<Record | null>(null);
     const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -52,7 +51,7 @@ export default function FacilityDashboard() {
             const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ file_name: fileName, file_creator: fileCreator, sharer, file_url: fileUrl, access_level: accessLevel }),
+                body: JSON.stringify({ file_name: fileName, file_creator: fileCreator, sharer, file_url: fileUrl }),
             });
 
             if (res.ok) {
@@ -60,7 +59,6 @@ export default function FacilityDashboard() {
                 setFileCreator('');
                 setSharer('');
                 setFileUrl('');
-                setAccessLevel('writer');
                 setEditingRecord(null);
                 setShowModal(false);
                 mutate();
@@ -99,7 +97,6 @@ export default function FacilityDashboard() {
         setFileCreator(r.file_creator);
         setSharer(r.sharer);
         setFileUrl(r.file_url);
-        setAccessLevel(r.access_level || 'writer');
         setShowModal(true);
     };
 
@@ -156,7 +153,14 @@ export default function FacilityDashboard() {
                     <tbody>
                         {records?.map((r) => (
                             <tr key={r.record_id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                <td style={{ padding: '0.75rem 1rem', fontWeight: 'bold' }}>{r.file_name}</td>
+                                <td style={{ padding: '0.75rem 1rem', fontWeight: 'bold' }}>
+                                    {r.file_name}
+                                    {r.access_level === 'view_only' && (
+                                        <span style={{ fontSize: '0.7rem', marginLeft: '0.5rem', padding: '0.125rem 0.375rem', borderRadius: '4px', backgroundColor: '#f3f4f6', color: '#6b7280', border: '1px solid #d1d5db' }}>
+                                            🔒 閲覧のみ
+                                        </span>
+                                    )}
+                                </td>
                                 <td style={{ padding: '0.75rem 1rem' }}>{r.file_creator}</td>
                                 <td style={{ padding: '0.75rem 1rem' }}>{r.sharer}</td>
                                 <td style={{ padding: '0.75rem 1rem' }}>
@@ -186,19 +190,51 @@ export default function FacilityDashboard() {
                                     {new Date(r.created_at).toLocaleDateString("ja-JP")}
                                 </td>
                                 <td style={{ padding: '0.75rem 1rem', display: 'flex', gap: '0.5rem' }}>
+                                    {/* Edit Button: Hide if View Only (unless Admin) */}
+                                    {(user?.role === 'admin' || (r.access_level !== 'view_only' && r.created_by === user?.user_id) || (user?.role === 'facility_admin' && r.access_level !== 'view_only')) && (
+                                        // Logic: Admin can always edit. Creator can edit IF not view_only. Facility Admin can edit IF not view_only.
+                                        // Wait, earlier logic: user?.role !== 'admin' && r.created_by !== user?.user_id
+                                        // My API logic: Facility Admin can update? api/[id]/route.ts checks "created_by !== ... && role !== 'admin'".
+                                        // So Facility Admin CANNOT update other's files unless they are Admin?
+                                        // Let's stick to existing logic + access_level check.
+                                        // Existing: `disabled={user?.role !== 'admin' && r.created_by !== user?.user_id}`
+                                        <button
+                                            className="btn btn-outline"
+                                            style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                                            onClick={() => handleOpenEdit(r)}
+                                            disabled={user?.role !== 'admin' && r.created_by !== user?.user_id}
+                                        >
+                                            編集
+                                        </button>
+                                    )}
+                                    {/* Re-evaluating visibility: If `disabled` was used, button was shown but grayed.
+                                         If `view_only`, we probably want to HIDE it or Disable it explicitly with a "Read Only" tooltip?
+                                         Let's just hide it if they strictly can't because of View Only.
+                                         AND keep the 'disabled' logic for non-owners.
+                                     */}
                                     <button
                                         className="btn btn-outline"
                                         style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
                                         onClick={() => handleOpenEdit(r)}
-                                        disabled={user?.role !== 'admin' && r.created_by !== user?.user_id}
+                                        disabled={(user?.role !== 'admin' && r.created_by !== user?.user_id) || (r.access_level === 'view_only' && user?.role !== 'admin')}
+                                        title={r.access_level === 'view_only' && user?.role !== 'admin' ? '閲覧のみの設定です' : ''}
                                     >
                                         編集
                                     </button>
+
                                     {(user?.role === 'admin' || r.created_by === user?.user_id) && (
                                         <button
                                             className="btn btn-outline"
-                                            style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', borderColor: 'var(--danger)', color: 'var(--danger)' }}
+                                            style={{
+                                                fontSize: '0.75rem',
+                                                padding: '0.25rem 0.5rem',
+                                                borderColor: 'var(--danger)',
+                                                color: 'var(--danger)',
+                                                opacity: (r.access_level === 'view_only' && user?.role !== 'admin') ? 0.5 : 1,
+                                                pointerEvents: (r.access_level === 'view_only' && user?.role !== 'admin') ? 'none' : 'auto'
+                                            }}
                                             onClick={() => handleDeleteClick(r.record_id)}
+                                            disabled={r.access_level === 'view_only' && user?.role !== 'admin'}
                                         >
                                             削除
                                         </button>
@@ -253,22 +289,6 @@ export default function FacilityDashboard() {
                                     <p style={{ fontSize: '0.75rem', marginTop: '0.5rem' }}>システムがこのアカウント経由で、閲覧者に自動的に編集権限を付与します。</p>
                                 </div>
                             )}
-
-                            <div style={{ marginBottom: '1rem' }}>
-                                <label className="label">公開権限</label>
-                                <select
-                                    className="input"
-                                    value={accessLevel} // Changed from selectedAccessLevel to accessLevel
-                                    onChange={e => setAccessLevel(e.target.value as 'writer' | 'reader')}
-                                    required
-                                >
-                                    <option value="writer">共同編集 (編集可能)</option>
-                                    <option value="reader">閲覧のみ (編集不可)</option>
-                                </select>
-                                <p style={{ fontSize: '0.75rem', marginTop: '0.25rem', color: 'var(--muted-foreground)' }}>
-                                    ※「共同編集」はユーザーがファイルを直接編集できます。「閲覧のみ」は見るだけです。
-                                </p>
-                            </div>
 
                             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                                 <button type="button" className="btn btn-outline" onClick={handleCloseModal}>キャンセル</button>

@@ -35,11 +35,17 @@ export async function GET(request: NextRequest) {
     try {
         const records = await getRecordsByFacility(targetFacilityId);
 
+        // Filter out admin_only for non-admins
+        const visibleRecords = records.filter(r => {
+            if (session.role === 'admin') return true;
+            return r.access_level !== 'admin_only';
+        });
+
         // Fetch user permissions
         const { getUserAccessedRecordIds } = await import('@/lib/db');
         const accessedIds = await getUserAccessedRecordIds(session.user_id);
 
-        const recordsWithStatus = records.map(r => ({
+        const recordsWithStatus = visibleRecords.map(r => ({
             ...r,
             is_accessed: accessedIds.has(r.record_id)
         }));
@@ -67,18 +73,9 @@ export async function POST(request: NextRequest) {
     // Determine target facility
     let targetFacilityId = session.facility_id;
     if (session.role === 'admin') {
-        const body = await request.clone().json(); // clone because we might read twice? No, just read once.
-        // wait, request.json() consumes body.
-        // Let's parse strictly.
+        const body = await request.clone().json();
+        // We will parse properly below
     }
-
-    // For simplicity, Admin should also be bound to a facility context in the UI, or pass it.
-    // However, createRecord in db.ts takes actorFacilityId. 
-    // If I am Admin acting on Facility A, I should pass Facility A's ID.
-    // But my 'session.facility_id' is 'system'.
-    // So the db logic `existing.facility_id !== actorFacilityId` in update might break for Admin if not careful.
-    // Actually, `createRecord` sets `facility_id` to `actorFacilityId`.
-    // So if Admin creates, they must provide the target facility ID.
 
     try {
         const body = await request.json();
@@ -94,12 +91,17 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: '必須項目が不足しています' }, { status: 400 });
         }
 
+        // Validate access_level
+        if (access_level && !['editable', 'view_only', 'admin_only'].includes(access_level)) {
+            return NextResponse.json({ error: 'Invalid access_level' }, { status: 400 });
+        }
+
         const newRecord = await createRecord(targetFacilityId, session.user_id, {
             file_name,
             file_creator,
             sharer,
             file_url,
-            access_level: access_level || 'writer' // Default to writer
+            access_level: access_level || 'editable'
         });
 
         // Audit Log

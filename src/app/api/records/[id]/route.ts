@@ -36,56 +36,38 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         }
 
         const body = await request.json();
-        const { file_name, file_creator, sharer, file_url } = body;
+        const { file_name, file_creator, sharer, file_url, access_level } = body;
 
-        // Admin overrides: We need to know the record's facility ID to check permission? 
-        // `updateRecord` in db.ts checks `existing.facility_id !== actorFacilityId`.
-        // This is a problem for Admin if `actorFacilityId` is 'system'.
-        // We need to allow Admin to bypass this check in `db.ts` or Update `db.ts` to handle Admin.
-        // OR: Admin temporarily "becomes" the facility? No.
-        // Let's stick to the spec: "認可は必ずサーバー側で強制".
-        // If Admin is the user, we should fetch the record, check its facility_id, and if valid, proceed.
+        // Access Level Change Permission
+        if (access_level && access_level !== existing.access_level) {
+            // Validate value
+            if (!['editable', 'view_only', 'admin_only'].includes(access_level)) {
+                return NextResponse.json({ error: 'Invalid access_level' }, { status: 400 });
+            }
 
-        // Actually, the `db.ts` implementation:
-        // if (existing.facility_id !== actorFacilityId) throw Error...
-        // This is too strict for Admin. 
-        // I should have modified `db.ts` to allow Admin.
-        // For now, I will modify `db.ts` later or handle it.
-        // Let's assume for this specific method, I will pass the *Record's* facility ID if the user is Admin.
+            // 'admin_only' can only be set by Global Admin
+            if (access_level === 'admin_only' && session.role !== 'admin') {
+                return NextResponse.json({ error: 'このアクセスレベルは全体管理者のみ設定可能です' }, { status: 403 });
+            }
+            // General logic: If we passed the earlier check (Creator or Admin/FacilityAdmin), we can generally change level
+            // unless it's to 'admin_only' (checked above).
+            // So no extra check needed here if we rely on "Creator/Admin" check at top.
+        }
 
-        // BUT `updateRecord` takes `actorFacilityId` and compares it.
-        // So for Admin, I need to fetch the record first here, see its facility_id, and pass THAT as actorFacilityId?
-        // That feels like cheating the check, but if the user IS admin, they are allowed.
-
-        // Let's modify `db.ts` in the future to be cleaner, but for now:
-        // We need to read the record first to know if it exists and to get its facility_id to satisfy the call or check logic.
-        // But `updateRecord` reads it again.
-
-        // Let's accept that for this MVC, Admin might have trouble with the current `db.ts` `updateRecord` strictness 
-        // unless I pass the correct facility_id.
-        // So:
         let actorFacilityId = session.facility_id;
         if (session.role === 'admin') {
-            // We need to know the facility_id of the record being edited.
-            // Since we don't have it easily without reading, implies we might need to read.
-            // OR we trust the body? No.
-            // Let's try to update, and if it fails, catch error?
-            // But the error is "Mismatch".
-
-            // WORKAROUND: For Admin, we pass the facility_id from the body or we must fetch it.
-            // Let's trust the existing db check for strictness for normal users.
-            // For Admin, we might need a separate function "adminUpdateRecord"?
-            // Or just make `updateRecord` accept a skip flag? 
-            // I'll stick to standard flow:
             if (body.facility_id) {
                 actorFacilityId = body.facility_id;
-            } else {
-                // If admin doesn't know the facility, they can't edit?
             }
         }
 
-        // Wait, `params.id` is available.
-        const updated = await updateRecord(actorFacilityId, session.user_id, id, body);
+        const updated = await updateRecord(actorFacilityId, session.user_id, id, {
+            file_name,
+            file_creator,
+            sharer,
+            file_url,
+            access_level // Included
+        });
 
         // Audit Log
         await addAuditLog({
