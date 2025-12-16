@@ -40,6 +40,6 @@ export async function POST(request: NextRequest) {
 
     } catch (error) {
         console.error('Login error:', error);
-        return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 });
+        return NextResponse.json({ error: `エラーが発生しました: ${(error as Error).message}` }, { status: 500 });
     }
 }
