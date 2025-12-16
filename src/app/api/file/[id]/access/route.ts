@@ -54,13 +54,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         }
 
         // 4. Grant Permission via Drive API
-        // User wants to EDIT. So role='writer'.
-        // Type='user'.
+        // Check record.access_level. Default to 'writer' (Editor) if undefined.
+        // Spec: "Allow view only" -> role='reader'.
+
+        let targetRole = 'writer';
+        if (record.access_level === 'reader') {
+            targetRole = 'reader';
+        }
 
         await drive.permissions.create({
             fileId,
             requestBody: {
-                role: 'writer', // Editor
+                role: targetRole,
                 type: 'user',
                 emailAddress: user.google_email,
             },

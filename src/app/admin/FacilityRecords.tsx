@@ -19,12 +19,12 @@ export default function FacilityRecords({ facilityId, facilityName, onClose }: F
     const [showModal, setShowModal] = useState(false);
 
     // Form State
-    const [fileName, setFileName] = useState('');
     const [fileCreator, setFileCreator] = useState('');
+    const [fileName, setFileName] = useState('');
     const [sharer, setSharer] = useState('');
     const [fileUrl, setFileUrl] = useState('');
+    const [accessLevel, setAccessLevel] = useState<'writer' | 'reader'>('writer');
     const [submitting, setSubmitting] = useState(false);
-
     const [editingRecord, setEditingRecord] = useState<Record | null>(null);
 
     const handleCreateRecord = async (e: React.FormEvent) => {
@@ -35,23 +35,18 @@ export default function FacilityRecords({ facilityId, facilityName, onClose }: F
         const url = editingRecord ? `/api/records/${editingRecord.record_id}` : '/api/records';
         const method = editingRecord ? 'PUT' : 'POST';
 
-        // Admin must provide facility_id in body for create, but maybe not update?
-        // Actually updateRecord checks facility_id match.
-        const body: any = {
-            file_name: fileName,
-            file_creator: fileCreator,
-            sharer,
-            file_url: fileUrl
-        };
-        if (!editingRecord) {
-            body.facility_id = facilityId;
-        }
-
         try {
             const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
+                body: JSON.stringify({
+                    facility_id: facilityId,
+                    file_name: fileName,
+                    file_creator: fileCreator,
+                    sharer,
+                    file_url: fileUrl,
+                    access_level: accessLevel
+                }),
             });
 
             if (res.ok) {
@@ -59,6 +54,7 @@ export default function FacilityRecords({ facilityId, facilityName, onClose }: F
                 setFileCreator('');
                 setSharer('');
                 setFileUrl('');
+                setAccessLevel('writer');
                 setEditingRecord(null);
                 setShowModal(false);
                 mutate();
@@ -119,6 +115,7 @@ export default function FacilityRecords({ facilityId, facilityName, onClose }: F
                             <th style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)' }}>ファイル名</th>
                             <th style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)' }}>ファイル作成者</th>
                             <th style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)' }}>共有者</th>
+                            <th style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)' }}>アクセスレベル</th>
                             <th style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)' }}>ファイルURL</th>
                             <th style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)' }}>登録日</th>
                             <th style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)' }}>操作</th>
@@ -127,13 +124,19 @@ export default function FacilityRecords({ facilityId, facilityName, onClose }: F
                     <tbody>
                         {records?.map((r) => (
                             <tr key={r.record_id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                <td style={{ padding: '0.5rem' }}><strong>{r.file_name}</strong></td>
-                                <td style={{ padding: '0.5rem' }}>{r.file_creator}</td>
-                                <td style={{ padding: '0.5rem' }}>{r.sharer}</td>
-                                <td style={{ padding: '0.5rem' }}>
+                                <td style={{ padding: '0.75rem 1rem' }}><strong>{r.file_name}</strong></td>
+                                <td style={{ padding: '0.75rem 1rem' }}>{r.file_creator}</td>
+                                <td style={{ padding: '0.75rem 1rem' }}>{r.sharer}</td>
+                                <td style={{ padding: '0.75rem 1rem', fontSize: '0.75rem' }}>
+                                    {r.access_level === 'reader' ?
+                                        <span style={{ color: 'var(--muted-foreground)', border: '1px solid var(--border)', borderRadius: '4px', padding: '2px 6px' }}>閲覧のみ</span> :
+                                        <span style={{ color: '#166534', backgroundColor: '#dcfce7', borderRadius: '4px', padding: '2px 6px' }}>共同編集</span>
+                                    }
+                                </td>
+                                <td style={{ padding: '0.75rem 1rem' }}>
                                     <a href={r.file_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>Link</a>
                                 </td>
-                                <td style={{ padding: '0.5rem' }}>
+                                <td style={{ padding: '0.75rem 1rem' }}>
                                     {new Date(r.created_at).toLocaleDateString("ja-JP")}
                                 </td>
                                 <td style={{ padding: '0.5rem', display: 'flex', gap: '0.5rem' }}>

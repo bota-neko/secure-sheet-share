@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
 
     try {
         const body = await request.json();
-        const { file_name, file_creator, sharer, file_url, facility_id } = body;
+        const { file_name, file_creator, sharer, file_url, facility_id, access_level } = body;
 
         if (session.role === 'admin') {
             if (!facility_id) return NextResponse.json({ error: 'Facility ID is required for admin' }, { status: 400 });
@@ -98,7 +98,8 @@ export async function POST(request: NextRequest) {
             file_name,
             file_creator,
             sharer,
-            file_url
+            file_url,
+            access_level: access_level || 'writer' // Default to writer
         });
 
         // Audit Log

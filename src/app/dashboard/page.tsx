@@ -22,6 +22,7 @@ export default function FacilityDashboard() {
     const [fileName, setFileName] = useState('');
     const [sharer, setSharer] = useState('');
     const [fileUrl, setFileUrl] = useState('');
+    const [accessLevel, setAccessLevel] = useState<'writer' | 'reader'>('writer'); // Default writer
     const [submitting, setSubmitting] = useState(false);
     const [editingRecord, setEditingRecord] = useState<Record | null>(null);
     const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -51,7 +52,7 @@ export default function FacilityDashboard() {
             const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ file_name: fileName, file_creator: fileCreator, sharer, file_url: fileUrl }),
+                body: JSON.stringify({ file_name: fileName, file_creator: fileCreator, sharer, file_url: fileUrl, access_level: accessLevel }),
             });
 
             if (res.ok) {
@@ -59,6 +60,7 @@ export default function FacilityDashboard() {
                 setFileCreator('');
                 setSharer('');
                 setFileUrl('');
+                setAccessLevel('writer');
                 setEditingRecord(null);
                 setShowModal(false);
                 mutate();
@@ -97,6 +99,7 @@ export default function FacilityDashboard() {
         setFileCreator(r.file_creator);
         setSharer(r.sharer);
         setFileUrl(r.file_url);
+        setAccessLevel(r.access_level || 'writer');
         setShowModal(true);
     };
 
@@ -250,6 +253,22 @@ export default function FacilityDashboard() {
                                     <p style={{ fontSize: '0.75rem', marginTop: '0.5rem' }}>システムがこのアカウント経由で、閲覧者に自動的に編集権限を付与します。</p>
                                 </div>
                             )}
+
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label className="label">公開権限</label>
+                                <select
+                                    className="input"
+                                    value={accessLevel} // Changed from selectedAccessLevel to accessLevel
+                                    onChange={e => setAccessLevel(e.target.value as 'writer' | 'reader')}
+                                    required
+                                >
+                                    <option value="writer">共同編集 (編集可能)</option>
+                                    <option value="reader">閲覧のみ (編集不可)</option>
+                                </select>
+                                <p style={{ fontSize: '0.75rem', marginTop: '0.25rem', color: 'var(--muted-foreground)' }}>
+                                    ※「共同編集」はユーザーがファイルを直接編集できます。「閲覧のみ」は見るだけです。
+                                </p>
+                            </div>
 
                             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                                 <button type="button" className="btn btn-outline" onClick={handleCloseModal}>キャンセル</button>
