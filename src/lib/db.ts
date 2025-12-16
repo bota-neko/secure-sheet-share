@@ -4,9 +4,16 @@ import * as crypto from 'crypto';
 
 // --- Facilities ---
 
+// --- Facilities ---
+
 export async function getAllFacilities(): Promise<Facility[]> {
     const data = await readSheet<Facility>('facilities');
     return data.filter(f => f.status !== 'inactive');
+}
+
+export async function getFacilityById(facilityId: string): Promise<Facility | undefined> {
+    const data = await readSheet<Facility>('facilities');
+    return data.find(f => f.facility_id === facilityId);
 }
 
 export async function createFacility(data: Omit<Facility, 'facility_id' | 'created_at' | 'updated_at'>): Promise<Facility> {

@@ -82,14 +82,20 @@ export async function POST(request: NextRequest) {
 
     try {
         const body = await request.json();
-        const { file_creator, sharer, file_url, facility_id } = body;
+        const { file_name, file_creator, sharer, file_url, facility_id } = body;
 
         if (session.role === 'admin') {
             if (!facility_id) return NextResponse.json({ error: 'Facility ID is required for admin' }, { status: 400 });
             targetFacilityId = facility_id;
         }
 
+        // Validate required fields
+        if (!file_name || !file_creator || !sharer || !file_url) {
+            return NextResponse.json({ error: '必須項目が不足しています' }, { status: 400 });
+        }
+
         const newRecord = await createRecord(targetFacilityId, session.user_id, {
+            file_name,
             file_creator,
             sharer,
             file_url

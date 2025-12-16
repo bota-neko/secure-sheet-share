@@ -1,12 +1,5 @@
 import useSWR from 'swr';
-
-export interface User {
-    user_id: string;
-    login_id: string;
-    role: 'admin' | 'facility_admin' | 'facility_editor' | 'facility_viewer';
-    facility_id: string;
-    google_email?: string;
-}
+import { User } from '@/lib/types';
 
 export interface AuthState {
     isLoggedIn: boolean;

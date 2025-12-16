@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getIronSession } from 'iron-session';
 import { sessionOptions, SessionData } from '@/lib/auth';
 import { updateRecord, softDeleteRecord, addAuditLog, getRecordsByFacility } from '@/lib/db';
+import { readSheet } from '@/lib/googleSheets'; // Import readSheet correctly
+import { Record } from '@/lib/types';
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const response = new NextResponse();
@@ -17,7 +19,24 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     try {
+        // Fetch the existing record to check permissions
+        const allRecords = await readSheet<Record>('records');
+        const existing = allRecords.find(r => r.record_id === id);
+
+        if (!existing) {
+            return NextResponse.json({ error: 'Record not found' }, { status: 404 });
+        }
+
+        // Authorization check: Only creator or admin can update
+        if (existing.created_by !== session.user_id && session.role !== 'admin') {
+            // Check if facility admin? maybe they can update?
+            // Spec: "Admin" can delete. Creator can delete.
+            // Update? Assuming same rules as delete for now.
+            return NextResponse.json({ error: '権限がありません' }, { status: 403 });
+        }
+
         const body = await request.json();
+        const { file_name, file_creator, sharer, file_url } = body;
 
         // Admin overrides: We need to know the record's facility ID to check permission? 
         // `updateRecord` in db.ts checks `existing.facility_id !== actorFacilityId`.

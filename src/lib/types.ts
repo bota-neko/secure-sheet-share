@@ -12,6 +12,7 @@ export interface Facility {
 export interface User {
     user_id: string;
     facility_id: string; // For admin, this might be 'system' or strict checking
+    facility_name?: string; // Display name
     login_id: string;
     email?: string;
     google_email?: string; // For auto-permission
@@ -26,6 +27,7 @@ export interface User {
 export interface Record {
     record_id: string;
     facility_id: string;
+    file_name: string;    // ファイル名（表示用タイトル）
     file_creator: string; // ファイル作成者
     sharer: string;       // 共有者
     file_url: string;     // ファイルURL

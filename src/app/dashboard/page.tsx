@@ -19,6 +19,7 @@ export default function FacilityDashboard() {
 
     // Form State
     const [fileCreator, setFileCreator] = useState('');
+    const [fileName, setFileName] = useState('');
     const [sharer, setSharer] = useState('');
     const [fileUrl, setFileUrl] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -50,10 +51,11 @@ export default function FacilityDashboard() {
             const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ file_creator: fileCreator, sharer, file_url: fileUrl }),
+                body: JSON.stringify({ file_name: fileName, file_creator: fileCreator, sharer, file_url: fileUrl }),
             });
 
             if (res.ok) {
+                setFileName('');
                 setFileCreator('');
                 setSharer('');
                 setFileUrl('');
@@ -91,6 +93,7 @@ export default function FacilityDashboard() {
 
     const handleOpenEdit = (r: Record) => {
         setEditingRecord(r);
+        setFileName(r.file_name || '');
         setFileCreator(r.file_creator);
         setSharer(r.sharer);
         setFileUrl(r.file_url);
@@ -102,6 +105,7 @@ export default function FacilityDashboard() {
     const handleCloseModal = () => {
         setShowModal(false);
         setEditingRecord(null);
+        setFileName('');
         setFileCreator('');
         setSharer('');
         setFileUrl('');
@@ -110,7 +114,12 @@ export default function FacilityDashboard() {
     return (
         <div className="container" style={{ padding: '2rem 1rem' }}>
             <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem' }}>
-                <h2>施設データ管理</h2>
+                <div>
+                    <h2>施設データ管理</h2>
+                    <div style={{ color: 'var(--muted-foreground)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
+                        {user?.facility_name ? `グループ: ${user.facility_name}` : '読み込み中...'}
+                    </div>
+                </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <div style={{ textAlign: 'right', fontSize: '0.8rem' }}>
                         <div style={{ marginBottom: '0.25rem' }}>ID: {user?.login_id}</div>
@@ -133,9 +142,10 @@ export default function FacilityDashboard() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
                     <thead style={{ backgroundColor: 'var(--muted)', textAlign: 'left' }}>
                         <tr>
-                            <th style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)' }}>ファイル作成者</th>
+                            <th style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)' }}>ファイル名</th>
+                            <th style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)' }}>作成者</th>
                             <th style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)' }}>共有者</th>
-                            <th style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)' }}>ファイルURL</th>
+                            <th style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)' }}>リンク</th>
                             <th style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)' }}>登録日</th>
                             <th style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)' }}>操作</th>
                         </tr>
@@ -143,7 +153,8 @@ export default function FacilityDashboard() {
                     <tbody>
                         {records?.map((r) => (
                             <tr key={r.record_id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                <td style={{ padding: '0.75rem 1rem' }}><strong>{r.file_creator}</strong></td>
+                                <td style={{ padding: '0.75rem 1rem', fontWeight: 'bold' }}>{r.file_name}</td>
+                                <td style={{ padding: '0.75rem 1rem' }}>{r.file_creator}</td>
                                 <td style={{ padding: '0.75rem 1rem' }}>{r.sharer}</td>
                                 <td style={{ padding: '0.75rem 1rem' }}>
                                     <Link
@@ -154,7 +165,7 @@ export default function FacilityDashboard() {
                                             display: 'inline-flex',
                                             alignItems: 'center',
                                             gap: '0.25rem',
-                                            color: r.is_accessed ? '#166534' : '#fff', // Green text if accessed? No, let's use Button style.
+                                            color: r.is_accessed ? '#166534' : '#fff',
                                             backgroundColor: r.is_accessed ? '#dcfce7' : 'var(--primary)',
                                             border: r.is_accessed ? '1px solid #bbf7d0' : 'none',
                                             padding: '0.375rem 0.75rem',
@@ -194,7 +205,7 @@ export default function FacilityDashboard() {
                         ))}
                         {(!records || records.length === 0) && (
                             <tr>
-                                <td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: 'var(--muted-foreground)' }}>
+                                <td colSpan={6} style={{ padding: '3rem', textAlign: 'center', color: 'var(--muted-foreground)' }}>
                                     データがありません
                                 </td>
                             </tr>
@@ -212,6 +223,10 @@ export default function FacilityDashboard() {
                     <div className="card" style={{ width: '100%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto' }}>
                         <h3 style={{ marginBottom: '1.5rem' }}>{editingRecord ? 'データ編集' : '新規登録'}</h3>
                         <form onSubmit={handleCreateRecord}>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label className="label">ファイル名 (必須)</label>
+                                <input className="input" value={fileName} onChange={e => setFileName(e.target.value)} required placeholder="例: 2024年度 顧客リスト" />
+                            </div>
                             <div style={{ marginBottom: '1rem' }}>
                                 <label className="label">ファイル作成者 (必須)</label>
                                 <input className="input" value={fileCreator} onChange={e => setFileCreator(e.target.value)} required />
