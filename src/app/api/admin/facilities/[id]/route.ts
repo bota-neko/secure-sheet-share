@@ -3,7 +3,7 @@ import { getIronSession } from 'iron-session';
 import { sessionOptions, SessionData } from '@/lib/auth';
 import { deleteFacility, addAuditLog } from '@/lib/db';
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const response = new NextResponse();
     const session = await getIronSession<SessionData>(request, response, sessionOptions);
     const { id } = await params;

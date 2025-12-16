@@ -4,7 +4,7 @@ import { sessionOptions, SessionData } from '@/lib/auth';
 import { deleteUser, addAuditLog, getUserById } from '@/lib/db';
 
 // DELETE: Delete (soft delete) a user
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const response = new NextResponse();
     const session = await getIronSession<SessionData>(request, response, sessionOptions);
     const { id } = await params;

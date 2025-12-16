@@ -5,7 +5,7 @@ import { readSheet } from '@/lib/googleSheets';
 import { extractFileIdFromUrl } from '@/lib/utils';
 import { Record } from '@/lib/types';
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const response = new NextResponse();
     const session = await getIronSession<SessionData>(request, response, sessionOptions);
     const { id } = await params;

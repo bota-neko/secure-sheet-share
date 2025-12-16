@@ -7,7 +7,7 @@ import { getUserByLoginId } from '@/lib/db';
 // Note: We need a way to get record by ID securely. 
 // Re-using generic readSheet or similar logic.
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const response = new NextResponse();
     const session = await getIronSession<SessionData>(request, response, sessionOptions);
     const { id } = await params;
