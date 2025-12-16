@@ -19,6 +19,7 @@ export default function FacilityRecords({ facilityId, facilityName, onClose }: F
     const [showModal, setShowModal] = useState(false);
 
     // Form State
+    const [fileName, setFileName] = useState('');
     const [fileCreator, setFileCreator] = useState('');
     const [sharer, setSharer] = useState('');
     const [fileUrl, setFileUrl] = useState('');
@@ -37,6 +38,7 @@ export default function FacilityRecords({ facilityId, facilityName, onClose }: F
         // Admin must provide facility_id in body for create, but maybe not update?
         // Actually updateRecord checks facility_id match.
         const body: any = {
+            file_name: fileName,
             file_creator: fileCreator,
             sharer,
             file_url: fileUrl
@@ -53,6 +55,7 @@ export default function FacilityRecords({ facilityId, facilityName, onClose }: F
             });
 
             if (res.ok) {
+                setFileName('');
                 setFileCreator('');
                 setSharer('');
                 setFileUrl('');
@@ -83,6 +86,7 @@ export default function FacilityRecords({ facilityId, facilityName, onClose }: F
 
     const handleOpenEdit = (r: Record) => {
         setEditingRecord(r);
+        setFileName(r.file_name || '');
         setFileCreator(r.file_creator);
         setSharer(r.sharer);
         setFileUrl(r.file_url);
@@ -92,6 +96,7 @@ export default function FacilityRecords({ facilityId, facilityName, onClose }: F
     const handleCloseModal = () => {
         setShowModal(false);
         setEditingRecord(null);
+        setFileName('');
         setFileCreator('');
         setSharer('');
         setFileUrl('');
@@ -102,7 +107,7 @@ export default function FacilityRecords({ facilityId, facilityName, onClose }: F
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                 <h4 style={{ margin: 0 }}>{facilityName} のデータ管理</h4>
                 <div>
-                    <button className="btn btn-primary" style={{ marginRight: '0.5rem', fontSize: '0.8rem' }} onClick={() => { setEditingRecord(null); setFileCreator(''); setSharer(''); setFileUrl(''); setShowModal(true); }}>+ 新規登録</button>
+                    <button className="btn btn-primary" style={{ marginRight: '0.5rem', fontSize: '0.8rem' }} onClick={() => { setEditingRecord(null); setFileName(''); setFileCreator(''); setSharer(''); setFileUrl(''); setShowModal(true); }}>+ 新規登録</button>
                     <button className="btn btn-outline" style={{ fontSize: '0.8rem' }} onClick={onClose}>閉じる</button>
                 </div>
             </div>
@@ -111,6 +116,7 @@ export default function FacilityRecords({ facilityId, facilityName, onClose }: F
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                     <thead style={{ backgroundColor: 'var(--muted)', textAlign: 'left' }}>
                         <tr>
+                            <th style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)' }}>ファイル名</th>
                             <th style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)' }}>ファイル作成者</th>
                             <th style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)' }}>共有者</th>
                             <th style={{ padding: '0.5rem', borderBottom: '1px solid var(--border)' }}>ファイルURL</th>
@@ -121,7 +127,8 @@ export default function FacilityRecords({ facilityId, facilityName, onClose }: F
                     <tbody>
                         {records?.map((r) => (
                             <tr key={r.record_id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                <td style={{ padding: '0.5rem' }}><strong>{r.file_creator}</strong></td>
+                                <td style={{ padding: '0.5rem' }}><strong>{r.file_name}</strong></td>
+                                <td style={{ padding: '0.5rem' }}>{r.file_creator}</td>
                                 <td style={{ padding: '0.5rem' }}>{r.sharer}</td>
                                 <td style={{ padding: '0.5rem' }}>
                                     <a href={r.file_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>Link</a>
@@ -165,6 +172,10 @@ export default function FacilityRecords({ facilityId, facilityName, onClose }: F
                     <div className="card" style={{ width: '100%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto' }}>
                         <h3 style={{ marginBottom: '1.5rem' }}>{facilityName}: {editingRecord ? '編集' : '新規登録'}</h3>
                         <form onSubmit={handleCreateRecord}>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label className="label">ファイル名 (必須)</label>
+                                <input className="input" value={fileName} onChange={e => setFileName(e.target.value)} required placeholder="例: ファイル名" />
+                            </div>
                             <div style={{ marginBottom: '1rem' }}>
                                 <label className="label">ファイル作成者 (必須)</label>
                                 <input className="input" value={fileCreator} onChange={e => setFileCreator(e.target.value)} required />
