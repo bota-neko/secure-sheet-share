@@ -3,6 +3,7 @@ dotenv.config({ path: '.env.local' });
 import { initializeTab, appendRow, readSheet } from '../src/lib/googleSheets';
 import bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
+import { User } from '../src/lib/types';
 
 async function main() {
     console.log('Initializing Secure Sheet Share...');
@@ -33,8 +34,8 @@ async function main() {
 
     // Check if Admin exists
     try {
-        const existingUsers = await readSheet('users');
-        const adminExists = existingUsers.some((u: any) => u.role === 'admin' && u.status === 'active');
+        const existingUsers = await readSheet<User>('users');
+        const adminExists = existingUsers.some(u => u.role === 'admin' && u.status === 'active');
 
         if (adminExists) {
             console.log('Admin user already exists. Skipping creation.');

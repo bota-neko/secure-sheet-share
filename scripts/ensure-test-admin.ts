@@ -1,8 +1,10 @@
-import { readSheet, createUser } from '../src/lib/db';
+import { readSheet } from '../src/lib/googleSheets';
+import { createUser } from '../src/lib/db';
 import { hashPassword } from '../src/lib/auth';
+import { User } from '../src/lib/types';
 
 async function main() {
-    const users = await readSheet('users');
+    const users = await readSheet<User>('users');
     const admin = users.find(u => u.role === 'admin');
 
     if (admin) {
