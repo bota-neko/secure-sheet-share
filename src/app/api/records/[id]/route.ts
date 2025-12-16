@@ -116,33 +116,45 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Role check: Admin or FacilityAdmin only?
-    // Spec: "論理削除（roleにより可否：例 admin/facility_adminのみ）"
-    if (session.role !== 'admin' && session.role !== 'facility_admin') {
+    // Role check: Admin, FacilityAdmin, or FacilityEditor (own only)
+    if (session.role !== 'admin' && session.role !== 'facility_admin' && session.role !== 'facility_editor') {
         return NextResponse.json({ error: '削除権限がありません' }, { status: 403 });
     }
 
     try {
         let facilityId = session.facility_id;
 
-        // If admin, we need to fetch the record to get its facility_id
-        if (session.role === 'admin') {
-            // Need a way to get record by ID without facility_id if possible, or just skip this specific facilityId check here 
-            // and let softDeleteRecord handle logic?
-            // `softDeleteRecord` calls `readSheet` then `updateRecord`.
+        // Fetch record to check permissions
+        const { readSheet } = await import('@/lib/googleSheets');
+        const records = await readSheet<Record>('records');
+        const existing = records.find(r => r.record_id === id);
 
-            // However, `softDeleteRecord` signature requires `actorFacilityId`.
-            // But actually, we pass `session.facility_id` which is 'system' for admin.
-            // In `db.ts`, `updateRecord` has logic: `if (actorFacilityId !== 'system' && existing.facility_id !== actorFacilityId)`.
-            // So if we pass 'system', it bypasses the facility check!
-            // Thus, purely for the function call, 'system' is fine.
-            // BUT for Audit Log, we might want the real facility_id.
-
-            // Let's rely on standard logic: pass 'system'.
-            // If we want Audit Log to have real ID, we'd need to fetch. 
-            // For now let's keep it simple and safe.
-            facilityId = 'system';
+        if (!existing) {
+            return NextResponse.json({ error: 'Record not found' }, { status: 404 });
         }
+
+        // Permission Logic
+        if (session.role === 'facility_editor') {
+            if (existing.created_by !== session.user_id) {
+                return NextResponse.json({ error: '他人のデータを削除する権限はありません' }, { status: 403 });
+            }
+            // Editor can only delete own
+        } else if (session.role === 'facility_admin') {
+            // Facility Admin can delete any file in their facility
+            if (existing.facility_id !== session.facility_id) {
+                return NextResponse.json({ error: '自施設のデータのみ削除可能です' }, { status: 403 });
+            }
+        }
+        // Admin is god
+
+        // ... continue with softDeleteRecord
+        // Note: softDeleteRecord takes facilityId.
+        // If we are admin, we might need existing.facility_id, but 'system' is fine for the function call as analyzed before.
+
+        // Wait, if I fetch here, I don't need to rely on softDeleteRecord's internal check blindly.
+        // But softDeleteRecord calls `updateRow`.
+
+        if (session.role === 'admin') facilityId = 'system';
 
         await softDeleteRecord(facilityId, session.user_id, id);
 
