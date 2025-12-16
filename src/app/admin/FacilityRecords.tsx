@@ -3,6 +3,7 @@
 import useSWR from 'swr';
 import { useState } from 'react';
 import { Record } from '@/lib/types';
+import Modal from './Modal';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -16,17 +17,18 @@ export default function FacilityRecords({ facilityId, facilityName, onClose }: F
     // Admin needs to pass facility_id query
     const { data: records, mutate } = useSWR<Record[]>(`/api/records?facility_id=${facilityId}`, fetcher);
 
+    // Form/Modal State
     const [showModal, setShowModal] = useState(false);
-
-    // Form State
     const [fileName, setFileName] = useState('');
     const [fileCreator, setFileCreator] = useState('');
     const [sharer, setSharer] = useState('');
     const [fileUrl, setFileUrl] = useState('');
     const [accessLevel, setAccessLevel] = useState<'editable' | 'view_only' | 'admin_only'>('editable');
     const [submitting, setSubmitting] = useState(false);
-
     const [editingRecord, setEditingRecord] = useState<Record | null>(null);
+
+    // Delete Modal State
+    const [deleteId, setDeleteId] = useState<string | null>(null);
 
     const handleCreateRecord = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -36,8 +38,6 @@ export default function FacilityRecords({ facilityId, facilityName, onClose }: F
         const url = editingRecord ? `/api/records/${editingRecord.record_id}` : '/api/records';
         const method = editingRecord ? 'PUT' : 'POST';
 
-        // Admin must provide facility_id in body for create, but maybe not update?
-        // Actually updateRecord checks facility_id match.
         const body: any = {
             file_name: fileName,
             file_creator: fileCreator,
@@ -65,7 +65,6 @@ export default function FacilityRecords({ facilityId, facilityName, onClose }: F
                 setEditingRecord(null);
                 setShowModal(false);
                 mutate();
-                alert('操作成功しました');
             } else {
                 const data = await res.json();
                 alert(data.error || '操作に失敗しました');
@@ -77,12 +76,20 @@ export default function FacilityRecords({ facilityId, facilityName, onClose }: F
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm('本当に削除しますか？')) return;
+    const handleDeleteClick = (id: string) => {
+        setDeleteId(id);
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteId) return;
         try {
-            const res = await fetch(`/api/records/${id}`, { method: 'DELETE' });
-            if (res.ok) mutate();
-            else alert('削除に失敗しました');
+            const res = await fetch(`/api/records/${deleteId}`, { method: 'DELETE' });
+            if (res.ok) {
+                mutate();
+                setDeleteId(null);
+            } else {
+                alert('削除に失敗しました');
+            }
         } catch (e) {
             alert('エラーが発生しました');
         }
@@ -175,7 +182,7 @@ export default function FacilityRecords({ facilityId, facilityName, onClose }: F
                                     <button
                                         className="btn btn-outline"
                                         style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', borderColor: 'var(--danger)', color: 'var(--danger)' }}
-                                        onClick={() => handleDelete(r.record_id)}
+                                        onClick={() => handleDeleteClick(r.record_id)}
                                     >
                                         削除
                                     </button>
@@ -236,6 +243,21 @@ export default function FacilityRecords({ facilityId, facilityName, onClose }: F
                     </div>
                 </div>
             )}
+
+            {/* Delete Modal */}
+            <Modal
+                isOpen={!!deleteId}
+                title="削除の確認"
+                onClose={() => setDeleteId(null)}
+                footer={
+                    <>
+                        <button className="btn btn-outline" onClick={() => setDeleteId(null)}>キャンセル</button>
+                        <button className="btn btn-primary" style={{ backgroundColor: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={confirmDelete}>削除する</button>
+                    </>
+                }
+            >
+                <p>本当にこのデータを削除しますか？この操作は取り消せません。</p>
+            </Modal>
         </div>
     );
 }

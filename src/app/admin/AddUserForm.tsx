@@ -146,10 +146,10 @@ export default function AddUserForm({ facilities, onCreated }: AddUserFormProps)
             <Modal
                 isOpen={modal.isOpen}
                 title={modal.title}
-                message={modal.message}
-                type={modal.type}
                 onClose={() => setModal({ ...modal, isOpen: false })}
-            />
+            >
+                <p>{modal.message}</p>
+            </Modal>
         </>
     );
 }

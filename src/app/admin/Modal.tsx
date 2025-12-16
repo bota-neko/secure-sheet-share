@@ -1,30 +1,24 @@
 'use client';
 
+import React from 'react';
+
 interface ModalProps {
     isOpen: boolean;
     title: string;
-    message: string;
+    description?: string;
+    children?: React.ReactNode;
     onClose: () => void;
-    onConfirm?: () => void;
-    confirmText?: string;
-    isProcessing?: boolean;
-    type?: 'alert' | 'confirm';
+    footer?: React.ReactNode;
 }
 
-export default function Modal({ isOpen, title, message, onClose, onConfirm, confirmText = 'OK', isProcessing, type = 'confirm' }: ModalProps) {
+export default function Modal({ isOpen, title, description, children, onClose, footer }: ModalProps) {
     if (!isOpen) return null;
 
     return (
         <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
+            position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
             backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            display: 'flex', justifyContent: 'center', alignItems: 'center',
             zIndex: 9999
         }}>
             <div style={{
@@ -35,38 +29,16 @@ export default function Modal({ isOpen, title, message, onClose, onConfirm, conf
                 maxWidth: '400px',
                 boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
             }}>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem', color: type === 'confirm' ? 'var(--danger)' : 'var(--foreground)' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>
                     {title}
                 </h3>
-                <p style={{ marginBottom: '1.5rem', color: 'var(--foreground)' }}>{message}</p>
+
+                {description && <p style={{ marginBottom: '1.5rem', color: 'var(--muted-foreground)' }}>{description}</p>}
+                {children && <div style={{ marginBottom: '1.5rem' }}>{children}</div>}
+
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                    {(type === 'confirm' || type === 'alert') && (
-                        <button
-                            onClick={onClose}
-                            className="btn btn-outline"
-                            disabled={isProcessing}
-                            type="button"
-                        >
-                            {type === 'alert' ? '閉じる' : 'キャンセル'}
-                        </button>
-                    )}
-                    {type === 'confirm' && onConfirm && (
-                        <button
-                            onClick={onConfirm}
-                            style={{
-                                backgroundColor: 'var(--danger)',
-                                color: 'white',
-                                border: 'none',
-                                padding: '0.5rem 1rem',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                opacity: isProcessing ? 0.7 : 1
-                            }}
-                            disabled={isProcessing}
-                            type="button"
-                        >
-                            {isProcessing ? '処理中...' : confirmText}
-                        </button>
+                    {footer ? footer : (
+                        <button className="btn btn-primary" onClick={onClose}>閉じる</button>
                     )}
                 </div>
             </div>
