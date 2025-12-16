@@ -6,19 +6,27 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "init-sheet": "tsx scripts/init-sheet.ts"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "googleapis": "^169.0.0",
+    "iron-session": "^8.0.4",
     "next": "16.0.10",
     "react": "19.2.1",
-    "react-dom": "19.2.1"
+    "react-dom": "19.2.1",
+    "swr": "^2.3.8"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.2.3",
     "eslint": "^9",
     "eslint-config-next": "16.0.10",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }
