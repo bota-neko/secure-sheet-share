@@ -124,13 +124,23 @@ const UserManagement = forwardRef<UserManagementRef, UserManagementProps>(({ fac
             <Modal
                 isOpen={!!deleteTarget}
                 title="ユーザー削除"
-                message={`${deleteTarget?.login_id} を本当に削除（無効化）しますか？`}
                 onClose={() => setDeleteTarget(null)}
-                onConfirm={confirmDelete}
-                confirmText="削除する"
-                isProcessing={isDeleting}
-                type="confirm"
-            />
+                footer={
+                    <>
+                        <button className="btn btn-outline" onClick={() => setDeleteTarget(null)} disabled={isDeleting}>キャンセル</button>
+                        <button
+                            className="btn btn-primary"
+                            style={{ backgroundColor: 'var(--danger)', borderColor: 'var(--danger)' }}
+                            onClick={confirmDelete}
+                            disabled={isDeleting}
+                        >
+                            {isDeleting ? '処理中...' : '削除する'}
+                        </button>
+                    </>
+                }
+            >
+                <p>{deleteTarget?.login_id} を本当に削除（無効化）しますか？</p>
+            </Modal>
         </section>
     );
 });
